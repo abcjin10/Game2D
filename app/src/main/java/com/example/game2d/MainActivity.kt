@@ -2,6 +2,7 @@ package com.example.game2d
 
 import Game
 import android.content.pm.ActivityInfo
+import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +27,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import com.example.game2d.ui.theme.Game2DTheme
 import kotlinx.coroutines.GlobalScope
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.platform.LocalContext
+import android.app.Activity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,8 +48,11 @@ class MainActivity : ComponentActivity() {
                     setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
                     val screenW = resources.displayMetrics.widthPixels
                     val screenH = resources.displayMetrics.heightPixels
-                    val game = Game(GlobalScope,screenW,screenH)
+                    val scale = resources.displayMetrics.density
+                    val game = Game(GlobalScope,screenW,screenH, scale, this)
                     Start(m = Modifier.padding(innerPadding),game)
+
+
                 }
             }
         }
@@ -64,6 +78,38 @@ fun Start(m: Modifier, game:Game){
         modifier = Modifier
             .offset { IntOffset(game.background.x1, 0) }
     )
+    //繪製小男孩
+    val boyImage = arrayListOf(R.drawable.boy1, R.drawable.boy2,
+        R.drawable.boy3, R.drawable.boy4, R.drawable.boy5,
+        R.drawable.boy6, R.drawable.boy7, R.drawable.boy8)
+
+    Image(
+        painter = painterResource(id = boyImage[game.boy.pictNo]),
+        contentDescription = "小男孩",
+        modifier = Modifier
+            .width(100.dp)
+            .height(220.dp)
+            .offset { IntOffset(0,400) }
+    )
+    //繪製病毒
+    val virusImage = arrayListOf(R.drawable.virus1, R.drawable.virus2)
+    Image(
+        painter = painterResource(id = virusImage[game.virus.pictNo]),
+        contentDescription = "病毒",
+        modifier = Modifier
+            .size(80.dp)
+            .offset { IntOffset(game.virus.x, game.virus.y) }
+            .pointerInput(Unit) {  //觸控病毒往上，扣一秒鐘
+                detectTapGestures(
+                    onTap = {
+                        game.virus.y -= 40
+                        game.counter -= 25
+                    }
+
+                )
+            }
+    )
+
     Image(
         painter = painterResource(id = R.drawable.forest),
         contentDescription = "背景圖2",
@@ -72,23 +118,30 @@ fun Start(m: Modifier, game:Game){
             .offset { IntOffset(game.background.x2, 0) }
     )
 
+    if (msg == "遊戲暫停" && !game.isPlaying){
+        msg = "遊戲結束，按此按鍵重新開始遊戲"
+    }
+
+
     Row {
         Button(
             onClick = {
-                if (msg=="遊戲開始"){
+                if (msg=="遊戲開始"|| msg =="遊戲繼續"){
                     msg = "遊戲暫停"
                     game.Play()
                 }
-                else{
-                    msg = "遊戲開始"
+                else if (msg=="遊戲暫停"){
+                    msg = "遊戲繼續"
                     game.isPlaying = false
+                }
+                else{  //重新開始遊戲
+                    msg = "遊戲暫停"
+                    game.Restart()
                 }
 
             },
             modifier = m
-        )
-
-        {
+        ) {
             Text(text = msg)
         }
         Text(text = "%.2f 秒".format(counter*.04), modifier = m)
@@ -105,4 +158,20 @@ fun Start(m: Modifier, game:Game){
         }
         Text(text = counter2.toString(), modifier = m)
     }
+    val activity = (LocalContext.current as? Activity)
+    Box (
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomEnd
+    ){
+        Button(
+            onClick = {
+                game.mper1.stop()
+                game.mper2.stop()
+                activity?.finish()
+            }
+        ) {
+            Text("結束App")
+        }
+    }
+
 }
